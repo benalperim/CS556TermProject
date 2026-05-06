@@ -1,11 +1,16 @@
 name: CI + Dependency Security
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: ["main"]
   schedule:
     - cron: "0 14 * * 1" # Mondays 14:00 UTC
+
+# Opt into Node.js 24 for JavaScriptbased GitHub Actions prevents the Node 20 deprecation warnings from becoming issues later)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -15,9 +20,9 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -25,7 +30,6 @@ jobs:
       - name: Install
         run: npm ci
 
-      # run only if the script exist in package.json
       - name: Lint
         run: npm run lint --if-present
 
@@ -39,9 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: ci
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+        #ty github updates for making my life harder
+      - uses: actions/checkout@v5
+      
+        #ty github updates for making my life harder
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -52,21 +58,23 @@ jobs:
       - name: npm audit (JSON)
         run: npm audit --json > audit.json || true
 
-      - name: Enforce security policy (fail on high/critical)
-        run: python3 scripts/risk_score.py audit.json
-
-        # fun part  get the sboms from cyclonedx and upload them as artifacts for future use in SCA and vulnerability management tools
       - name: Generate SBOM (CycloneDX)
-        run: npx --yes @cyclonedx/cyclonedx-npm --output-file sbom.json
+        run: npx --yes @cyclonedx/cyclonedx-npm --output-file sbom.json || true
 
-      - name: Upload security artifacts
-        uses: actions/upload-artifact@v4
+      # ✅ Upload artifacts BEFORE enforcing the fail-policy, and always upload even if something fails love to see it
+      - name: Upload security artifacts (always)
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
           name: security-artifacts
           path: |
             audit.json
             sbom.json
-  #dependabot PRs are automatically merged if the CI and dependency security checks pass, and the PR is created by it
+
+      # This will likely fail for nodejs-goof (expected), but you still get artifacts now.
+      - name: Enforce security policy (fail on high/critical)
+        run: python3 scripts/risk_score.py audit.json
+
   automerge-dependabot:
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
