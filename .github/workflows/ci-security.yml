@@ -45,7 +45,7 @@ jobs:
     steps:
         #ty github updates for making my life harder
       - uses: actions/checkout@v5
-      
+
         #ty github updates for making my life harder
       - uses: actions/setup-node@v6
         with:
@@ -54,6 +54,9 @@ jobs:
 
       - name: Install
         run: npm ci
+        #pls work 
+      - name: snyk test
+        run: snyk test || true
 
       - name: npm audit (JSON)
         run: npm audit --json > audit.json || true
