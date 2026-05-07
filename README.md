@@ -1,5 +1,14 @@
 # Evaluation
 
+## Security Automation Results (npm audit)
+
+This repo is used to demonstrate an automated dependency security workflow for a single Node.js application:
+- Deterministic installs with `npm ci`
+- Vulnerability reporting with `npm audit --json`
+- SBOM generation (CycloneDX)
+- (Optional) Policy gate to block merges when HIGH/CRITICAL findings exist
+- (Optional) Auto-merge for Dependabot PRs when checks pass
+
 ## Project Goal
 This project implements a CI-based dependency security pipeline for a single Node.js application that:
 1) installs dependencies deterministically (`npm ci`),
@@ -9,6 +18,8 @@ This project implements a CI-based dependency security pipeline for a single Nod
 ## Baseline Repository Context (nodejs-goof)
 The selected target repository (nodejs-goof) is an intentionally vulnerable Node.js application designed for security training. Its dependency set includes known vulnerable packages and transitive dependencies on purpose. This makes it a good test case to validate that a CI “security gate” is able to detect and prevent risky dependency states from being merged.
 
+> Note: nodejs-goof is intentionally vulnerable for training purposes, so even after updates it is expected to still contain HIGH/CRITICAL findings. The security gate is meant to detect this and (in strict mode) block merges until risk is reduced.
+
 ## Snapshot Table (Baseline vs Updates)
 > Fill in “Update #1 / Update #2” after you merge Dependabot PRs (or manual upgrade PRs) and download the `audit.json` artifact from the **run on `main`**.
 
@@ -16,7 +27,7 @@ The selected target repository (nodejs-goof) is an intentionally vulnerable Node
 |---------:|-------------------|-----------------|----:|---------:|-----:|---------:|------------|------|
 | Baseline | 2026-03-06 | GitHub Actions (main) | 8 | 32 | 66 | 36 | **Fail** | Intentionally vulnerable repo; expected to fail policy |
 | Update #1 | 2026-03-06 | PR | 8 | 32 | 66 | 36 | **Fail** |  dependency-security Failed Because the way risk_score Script is set. second run will allow high risks for testing auto merge purposes.  |
-| Update #2 | TBD | TBD | TBD | TBD | TBD | TBD | TBD | e.g., additional upgrades / policy tuning |
+| Update #2 | 2026-03-06 | Dependabot PR | 0 | 8 | 16 | 14 | Pass with sub-merge Requests |passed security check intentionally to test the updates.|
 
 ## Baseline Measurements (Before Any Dependency Updates)
 Source: GitHub Actions run (dependency-security job), output from `scripts/risk_score.py` using `npm audit --json`.
@@ -30,8 +41,13 @@ Artifacts collected from the workflow run:
 - `audit.json` (npm audit report)
 - `sbom.json` (CycloneDX SBOM)
 
-## Policy Gate Result
+## Policy  Result
 The dependency-security job fails intentionally when **HIGH** or **CRITICAL** vulnerabilities are present.
+
+### Policy Gate (strict vs demo mode)
+- **Strict mode (recommended for real projects):** fail the workflow if HIGH/CRITICAL vulnerabilities are present.
+- **Demo / metrics-only mode:** still generate and upload the artifacts, but do not fail the job (useful for showing auto-merge behavior while still tracking risk).
+
 
 **Observed behavior:**  
 The workflow prints the severity counts and then exits with failure because high/critical vulnerabilities exist. This is expected for nodejs-goof.
@@ -45,14 +61,9 @@ This repository is deliberately insecure by design, so a correctly configured se
 
 In other words, the “failure” is not a CI malfunction—it's the intended security outcome proving the control works.
 
-## Next Evaluation Steps (After Updates)
-1) Merge a dependency update (e.g., a Dependabot PR that changes `package-lock.json`).
-2) Re-run the pipeline on `main` and record new severity counts.
-3) Compare before/after metrics:
-   - change in vulnerability counts by severity,
-   - time-to-remediate (PR opened → merged),
-   - CI breakage rate for update PRs (tests/audit failures),
-   - percentage of updates auto-merged vs blocked by policy.
+### Where to find the updated reports (Artifacts)
+Each GitHub Actions run uploads:
+- `audit.json` (the full npm audit report)
+- `sbom.json` (CycloneDX SBOM)
 
-## Notes / Assumptions
-- `npm ci` is deterministic and does not upgrade packages. Vulnerability counts will not change until dependency versions in `package-lock.json` change (via Dependabot or manual updates), or unless the underlying vulnerability database changes.
+
