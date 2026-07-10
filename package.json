@@ -51,7 +51,7 @@
   "devDependencies": {
     "browserify": "^17.0.1",
     "nodemon": "^3.1.14",
-    "snyk": "^1.1305.2"
+    "snyk": "^1.1306.0"
   },
   "license": "Apache-2.0"
 }
