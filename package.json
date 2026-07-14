@@ -45,7 +45,7 @@
     "st": "4.0.3",
     "stream-buffers": "^3.0.3",
     "tap": "^21.7.4",
-    "typeorm": "^1.0.0",
+    "typeorm": "^1.1.0",
     "validator": "^13.5.2"
   },
   "devDependencies": {
