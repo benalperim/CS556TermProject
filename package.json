@@ -15,7 +15,7 @@
     "test": "snyk test"
   },
   "dependencies": {
-    "adm-zip": "0.5.18",
+    "adm-zip": "0.6.0",
     "body-parser": "2.3.0",
     "cfenv": "^1.2.6",
     "consolidate": "0.14.5",
